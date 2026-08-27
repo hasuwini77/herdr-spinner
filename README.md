@@ -1,0 +1,119 @@
+# Herdr Agent Spinner
+
+An animated braille spinner for Herdr panes in the `working` state.
+
+![state](https://img.shields.io/badge/herdr-%3E%3D0.8.0-blue) ![license](https://img.shields.io/badge/license-MIT-green)
+
+## Why
+
+Herdr renders agent status as a **static** glyph. In `src/ui/status.rs`,
+`state_icon_symbol` returns one character per state with no frame cycling:
+
+| state          | `dots` | `symbols` |
+| -------------- | ------ | --------- |
+| blocked        | `●`    | `×`       |
+| **working**    | `●`    | `◐`       |
+| idle (unseen)  | `●`    | `✓`       |
+| idle (seen)    | `○`    | `○`       |
+| unknown        | `·`    | `·`       |
+
+With several agents running, a static `◐` is easy to lose in the column — a
+spinner is the conventional "this one is actually moving" signal, and it reads
+at a glance in a way a still glyph does not.
+
+This plugin adds that motion **without patching Herdr**. It uses only the
+public surface:
+
+```
+herdr pane report-metadata <pane> --source hasuwini77.spinner --token spin=⣾ --ttl-ms 1280
+```
+
+which feeds the `$spin` token you reference from `ui.sidebar.agents.rows`.
+
+## Install
+
+```sh
+git clone https://github.com/hasuwini77/herdr-spinner ~/dev/herdr-spinner
+herdr plugin link ~/dev/herdr-spinner
+```
+
+Then add `$spin` to your agent rows in `~/.config/herdr/config.toml`:
+
+```toml
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", { token = "workspace", bold = false }, "tab"],
+  ["$spin", { token = "state_text", bold = false, dim = false }, "agent"],
+]
+```
+
+```sh
+herdr config check && herdr server reload-config
+```
+
+The spinner starts with the session. To drive it manually:
+
+```sh
+herdr plugin action invoke restart --plugin hasuwini77.spinner
+herdr plugin action invoke stop    --plugin hasuwini77.spinner
+```
+
+## Configuration
+
+Optional, at `~/.config/herdr/plugins/config/hasuwini77.spinner/config.json`
+(find it with `herdr plugin config-dir hasuwini77.spinner`):
+
+```json
+{
+  "frames": ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
+  "intervalMs": 160,
+  "pollMs": 1000,
+  "animateStates": ["working"],
+  "enabled": true
+}
+```
+
+`intervalMs` defaults to 160 (6.25fps) on purpose — see Cost.
+
+## Cost
+
+Each frame is one `herdr pane report-metadata` call per animating pane
+(~4ms measured). On this machine, with **3 panes working at 6.25fps**:
+
+| process        | CPU (one core) |
+| -------------- | -------------- |
+| spinner daemon | 1.5%           |
+| herdr server   | +2.9% over its 5.3% baseline |
+
+So roughly **1% of a core per working pane**. Idle, blocked, and done panes
+cost nothing — only `working` panes are animated. Raising `intervalMs` lowers
+this proportionally.
+
+For context, herdrdev/herdr#1862 treated ~20% sustained server CPU as a bug,
+so the interval default is deliberately conservative rather than 60fps-smooth.
+
+## Design notes
+
+- **Self-healing.** Every token carries `--ttl-ms` (8 frames). If the daemon is
+  killed, tokens expire on their own instead of freezing a glyph in the sidebar.
+  `SIGTERM`/`SIGINT`/`SIGHUP` clear them explicitly first.
+- **Singleton.** `run.sh` keeps a pidfile and stops any previous daemon before
+  starting. Herdr can fire the startup hook more than once (session restore,
+  live handoff) and two daemons would fight over the same token.
+- **Transient failures are ignored.** If `herdr api snapshot` fails, the last
+  known working set is kept rather than clearing every spinner on one blip.
+
+## Known limitation
+
+Herdr documents startup hooks as *"one-shot initialization commands rather than
+supervised daemons"*. This plugin needs a persistent process to animate, so
+`run.sh` detaches and exits immediately, leaving the daemon running outside
+Herdr's supervision. It works, and the pidfile plus TTL keep it tidy — but a
+native implementation inside Herdr would be strictly better, and much cheaper:
+herdrdev/herdr#1868 already built a sidebar-only redraw path for animation
+frames, so the expensive part is the per-frame process spawn this plugin cannot
+avoid from outside.
+
+## License
+
+MIT © 2026 Edwin (hasuwini77)

@@ -1,0 +1,21 @@
+id = "hasuwini77.spinner"
+name = "Agent Spinner"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Animated braille spinner for panes in the working state, via display-only pane metadata"
+platforms = ["linux", "macos"]
+
+[[startup]]
+command = ["sh", "run.sh"]
+
+[[actions]]
+id = "restart"
+title = "Restart agent spinner"
+contexts = ["workspace"]
+command = ["sh", "run.sh", "--restart"]
+
+[[actions]]
+id = "stop"
+title = "Stop agent spinner"
+contexts = ["workspace"]
+command = ["sh", "run.sh", "--stop"]
