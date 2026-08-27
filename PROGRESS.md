@@ -44,3 +44,17 @@ server CPU as a real defect.
 idle/blocked/done panes untouched; `--stop` and daemon death both clear every
 token (TTL failsafe); `herdr plugin link` and `herdr plugin action invoke`
 drive it end to end.
+
+### Follow-ups same day
+
+- **Spinner was grey.** `$spin` is a custom token with no state colour of its
+  own, and row 2's dim context greyed it out. Fixed with an explicit
+  `fg = "#fab387"` plus `dim = false`. Note sidebar token `fg` is hex-only —
+  `fg = "yellow"` fails config check with `data did not match any variant of
+  untagged enum RawSidebarToken`.
+- **Dropped `state_icon`** from the agent rows. With the spinner animating the
+  working state, the static half circle was redundant.
+- **`run.sh` hardening.** Stop now kills by script path rather than trusting
+  the pidfile alone, since the pidfile only remembers the most recent start.
+  (No leak was actually observed — an earlier "two daemons" reading was a
+  `pgrep -f` self-match, not a real second process.)

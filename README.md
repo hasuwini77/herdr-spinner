@@ -42,10 +42,23 @@ Then add `$spin` to your agent rows in `~/.config/herdr/config.toml`:
 ```toml
 [ui.sidebar.agents]
 rows = [
-  ["state_icon", { token = "workspace", bold = false }, "tab"],
-  ["$spin", { token = "state_text", bold = false, dim = false }, "agent"],
+  [{ token = "workspace", bold = false }, "tab"],
+  [{ token = "$spin", fg = "#fab387", dim = false, bold = true }, { token = "state_text", bold = false, dim = false }, "agent"],
 ]
 ```
+
+Two things matter here:
+
+- **`$spin` needs an explicit `fg`.** It is a custom token with no state colour
+  of its own, and without `dim = false` it inherits the row's dim context and
+  renders grey. Sidebar token `fg` is **hex only** — named colours such as
+  `"yellow"` fail `herdr config check` with
+  `data did not match any variant of untagged enum RawSidebarToken`.
+- **`state_text` deliberately has no `fg`,** so it keeps Herdr's per-state
+  colouring (working/blocked/done/idle each get their own).
+
+`state_icon` is dropped entirely — the animated spinner replaces the static
+half circle. Keep it if you prefer a stable column for non-working states.
 
 ```sh
 herdr config check && herdr server reload-config

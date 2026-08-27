@@ -11,19 +11,25 @@ dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 state="${XDG_RUNTIME_DIR:-/tmp}/herdr-spinner.pid"
 
 stop_existing() {
-  [ -f "$state" ] || return 0
+  # Kill by script path, not just the pidfile. Herdr can fire the startup hook
+  # concurrently with a manual action; the pidfile only remembers the most
+  # recent start, so a pidfile-only stop leaks the other daemon. Two daemons
+  # double the CPU and fight over the same token.
+  dir_esc=$1
+  pkill -TERM -f "$dir_esc/spinner.js" 2>/dev/null || true
   old=$(cat "$state" 2>/dev/null || true)
   if [ -n "${old:-}" ] && kill -0 "$old" 2>/dev/null; then
-    # SIGTERM so the daemon clears its tokens before exiting.
     kill -TERM "$old" 2>/dev/null || true
   fi
   rm -f "$state"
+  # Let SIGTERM handlers clear their tokens before we start a replacement.
+  sleep 1
 }
 
 case "${1:-}" in
-  --stop) stop_existing; exit 0 ;;
-  --restart) stop_existing ;;
-  *) stop_existing ;;
+  --stop) stop_existing "$dir"; exit 0 ;;
+  --restart) stop_existing "$dir" ;;
+  *) stop_existing "$dir" ;;
 esac
 
 node_bin="${HERDR_SPINNER_NODE:-}"
