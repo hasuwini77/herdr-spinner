@@ -105,6 +105,24 @@ this proportionally.
 For context, herdrdev/herdr#1862 treated ~20% sustained server CPU as a bug,
 so the interval default is deliberately conservative rather than 60fps-smooth.
 
+## Troubleshooting
+
+Working panes show no spinner? Check in this order:
+
+1. **Is a frame being published?** `herdr pane list | grep spin` — a working
+   pane should carry `"tokens":{"spin":"⣽"}`, changing between calls.
+2. **Is the plugin enabled?** `herdr plugin list`. A disabled plugin, or a
+   stale copy (e.g. a demo linked from `/tmp`) enabled in its place, leaves
+   `$spin` empty. Fix: `herdr plugin enable hasuwini77.spinner`.
+3. **Is the daemon running?** It starts with the Herdr server. After enabling
+   mid-session, start it with
+   `herdr plugin action invoke restart --plugin hasuwini77.spinner`.
+4. **Does your row template use the token?** `[ui.sidebar.agents] rows` must
+   contain `$spin` — see Install.
+5. **Does `herdr` on PATH match the server?** The daemon calls the `herdr`
+   CLI. If it is older than the running server (`protocol_mismatch`), every
+   frame is rejected. Point PATH or `HERDR_BIN` at the matching binary.
+
 ## Design notes
 
 - **Self-healing.** Every token carries `--ttl-ms` (8 frames). If the daemon is
