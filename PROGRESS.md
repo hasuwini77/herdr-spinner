@@ -1,5 +1,13 @@
 # Progress
 
+## 2026-09-22 — spinner went silent; troubleshooting docs
+
+**Cause:** plugin disabled, with a stale `spinner-demo` copy (linked from a
+deleted `/tmp` dir) enabled in its place, so `$spin` stayed empty.
+**Fix (local):** re-enabled `hasuwini77.spinner`, restarted the daemon,
+local `intervalMs: 80` (12.5fps). Frames verified changing via `herdr pane list`.
+**Shipped:** README troubleshooting checklist (#1, PR #2).
+
 ## 2026-08-27 — animated spinner for working agents
 
 **Wanted:** the agents sidebar showed a static `◐` for a working pane. With
