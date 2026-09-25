@@ -1,5 +1,16 @@
 # Progress
 
+## 2026-09-25 — v0.2.0: spinner styles + theme presets (#3, PR #4)
+
+**Shipped:** 13 named spinner styles (`style` in config.json, default
+unchanged), 6 theme presets on Herdr built-ins via a managed `[theme]` block,
+three new actions (next spinner, next theme, restore theme), 10 tests + CI.
+**Evidence:** `node --test` 10/10 (every preset passes the real
+`herdr config check`); sandbox e2e apply → next → reset round-trips the config
+(one blank line differs); a validator-rejected write left the file
+byte-identical; live `next-spinner` action switched braille → dots with frames
+animating, then restored.
+
 ## 2026-09-22 — spinner went silent; troubleshooting docs
 
 **Cause:** plugin disabled, with a stale `spinner-demo` copy (linked from a
