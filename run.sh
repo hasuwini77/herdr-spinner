@@ -26,11 +26,8 @@ stop_existing() {
   sleep 1
 }
 
-case "${1:-}" in
-  --stop) stop_existing "$dir"; exit 0 ;;
-  --restart) stop_existing "$dir" ;;
-  *) stop_existing "$dir" ;;
-esac
+# Stopping must work even on a machine where node has gone missing.
+[ "${1:-}" = --stop ] && { stop_existing "$dir"; exit 0; }
 
 node_bin="${HERDR_SPINNER_NODE:-}"
 if [ -z "$node_bin" ] && command -v node >/dev/null 2>&1; then
@@ -45,6 +42,13 @@ if [ -z "$node_bin" ]; then
   echo "herdr-spinner: no node binary found; set HERDR_SPINNER_NODE" >&2
   exit 1
 fi
+
+case "${1:-}" in
+  # Style switching is a one-shot command, not a daemon start.
+  --style) shift; exec "$node_bin" "$dir/style.js" "$@" ;;
+  --restart) stop_existing "$dir" ;;
+  *) stop_existing "$dir" ;;
+esac
 
 # Detach so the hook returns immediately; Herdr should not wait on a daemon.
 "$node_bin" "$dir/spinner.js" >/dev/null 2>&1 &

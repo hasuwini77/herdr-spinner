@@ -1,8 +1,10 @@
 # Herdr Agent Spinner
 
-An animated braille spinner for Herdr panes in the `working` state.
+Animated spinners for Herdr panes in the `working` state — **13 styles** — plus
+**6 theme presets** layered on Herdr's built-in themes. Restyle the sidebar;
+Herdr keeps working exactly as before.
 
-![state](https://img.shields.io/badge/herdr-%3E%3D0.8.0-blue) ![license](https://img.shields.io/badge/license-MIT-green)
+![state](https://img.shields.io/badge/herdr-%3E%3D0.8.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) [![ci](https://github.com/hasuwini77/herdr-spinner/actions/workflows/ci.yml/badge.svg)](https://github.com/hasuwini77/herdr-spinner/actions/workflows/ci.yml)
 
 ## Why
 
@@ -71,6 +73,54 @@ herdr plugin action invoke restart --plugin hasuwini77.spinner
 herdr plugin action invoke stop    --plugin hasuwini77.spinner
 ```
 
+## Styles
+
+Switch from Herdr's action menu, or from a shell:
+
+| action                      | shell                                                       |
+| --------------------------- | ----------------------------------------------------------- |
+| Next spinner style          | `sh run.sh --style spinner next` (or `spinner <name>`)      |
+| Next theme preset           | `sh run.sh --style theme next` (or `theme <name>`)          |
+| Restore my original theme   | `sh run.sh --style theme reset`                             |
+
+`--style spinner list` and `--style theme list` show what's available and
+which one is active. Run the shell forms from the plugin directory.
+
+### Spinners
+
+| style      | frames            | style      | frames            |
+| ---------- | ----------------- | ---------- | ----------------- |
+| `braille`* | `⣾⣽⣻⢿⡿⣟⣯⣷`        | `square`   | `◰◳◲◱`            |
+| `dots`     | `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`      | `triangle` | `◢◣◤◥`            |
+| `bounce`   | `⠁⠂⠄⡀⢀⠠⠐⠈`        | `arrow`    | `←↖↑↗→↘↓↙`        |
+| `line`     | `-\\|/`          | `pulse`    | `·•●•`            |
+| `arc`      | `◜◠◝◞◡◟`          | `bars`     | `▁▂▃▄▅▆▇█▇▆▅▄▃▂`  |
+| `circle`   | `◐◓◑◒`            | `star`     | `✶✸✹✺✹✷`          |
+| `toggle`   | `⊶⊷`              |            |                   |
+
+\* default. Every frame is one terminal cell, so rows never jitter.
+
+### Theme presets
+
+| preset      | on top of      | mood                                  |
+| ----------- | -------------- | ------------------------------------- |
+| `nocturne`  | `tokyo-night`  | near-black, violet accent — matches [Noctu](https://github.com/hasuwini77/ccstatusline-nocturne) |
+| `synthwave` | `dracula`      | hot pink and cyan                      |
+| `matrix`    | `one-dark`     | phosphor green                         |
+| `ember`     | `gruvbox`      | warm orange                            |
+| `glacier`   | `nord`         | icy blues                              |
+| `mono`      | `one-dark`     | greyscale — except red, so blocked still shouts |
+
+Want just the colours? `node -e 'console.log(require("./presets").themeToml("ember"))'`
+prints the TOML to paste yourself.
+
+**How a theme is applied, safely:** your `[theme]` tables are moved into a
+managed block at the end of `config.toml`; nothing else in the file changes.
+The candidate file goes through `herdr config check` first and is only written
+if it adds no new diagnostics. The previous file is copied to
+`backups/` in the plugin config dir, then `herdr server reload-config` applies
+it live. `theme reset` removes the block and puts your original tables back.
+
 ## Configuration
 
 Optional, at `~/.config/herdr/plugins/config/hasuwini77.spinner/config.json`
@@ -78,7 +128,7 @@ Optional, at `~/.config/herdr/plugins/config/hasuwini77.spinner/config.json`
 
 ```json
 {
-  "frames": ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
+  "style": "braille",
   "intervalMs": 160,
   "pollMs": 1000,
   "animateStates": ["working"],
@@ -86,7 +136,11 @@ Optional, at `~/.config/herdr/plugins/config/hasuwini77.spinner/config.json`
 }
 ```
 
-`intervalMs` defaults to 160 (6.25fps) on purpose — see Cost.
+`style` picks a spinner. For your own glyphs, drop `style` and set
+`"frames": ["a", "b", ...]` instead (the v0.1 config keeps working as is).
+
+`intervalMs` defaults to each style's own pace (160ms, 6.25fps, for braille)
+on purpose — see Cost. Set it to override every style.
 
 ## Cost
 

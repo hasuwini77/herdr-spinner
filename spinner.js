@@ -11,17 +11,16 @@
 // Nothing is patched; if the daemon dies, --ttl-ms expires every token it set.
 
 const { spawn, spawnSync } = require("node:child_process");
-const fs = require("node:fs");
-const os = require("node:os");
-const path = require("node:path");
+const { SPINNERS } = require("./presets");
+const { PLUGIN_ID, readConfig } = require("./config");
 
-const PLUGIN_ID = "hasuwini77.spinner";
-const HERDR = process.env.HERDR_BIN || "herdr";
+const HERDR = process.env.HERDR_BIN_PATH || process.env.HERDR_BIN || "herdr";
 const TOKEN = "spin";
 
 const DEFAULTS = {
-  // Braille ring: reads as motion even at a low frame rate.
-  frames: ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
+  // Braille ring: reads as motion even at a low frame rate. See presets.js
+  // for the other styles; `style` picks one, `frames` is a custom set.
+  style: "braille",
   // 160ms = 6.25fps. Deliberately calm: each frame costs one `herdr` spawn per
   // working pane (~4ms measured), and herdrdev/herdr#1862 shows the maintainers
   // treat sustained server CPU as a real defect. Fast enough to read as motion.
@@ -33,32 +32,24 @@ const DEFAULTS = {
   enabled: true,
 };
 
-function configPath() {
-  const base = process.env.HERDR_CONFIG_DIR ||
-    path.join(os.homedir(), ".config", "herdr");
-  return path.join(base, "plugins", "config", PLUGIN_ID, "config.json");
-}
-
-function loadConfig() {
-  try {
-    const raw = JSON.parse(fs.readFileSync(configPath(), "utf8"));
-    const cfg = { ...DEFAULTS, ...raw };
-    // A malformed frame list would render an empty column forever; fall back.
-    if (!Array.isArray(cfg.frames) || cfg.frames.length === 0) {
-      cfg.frames = DEFAULTS.frames;
-    }
-    cfg.intervalMs = Math.max(40, Number(cfg.intervalMs) || DEFAULTS.intervalMs);
-    cfg.pollMs = Math.max(250, Number(cfg.pollMs) || DEFAULTS.pollMs);
-    return cfg;
-  } catch {
-    return { ...DEFAULTS };
+// Frame source, in priority order: an explicit named `style`, a custom
+// `frames` array (the v0.1 config shape), then the braille default. A preset's
+// own pace applies unless `intervalMs` is set.
+function loadConfig(raw = readConfig()) {
+  const cfg = { ...DEFAULTS, ...raw };
+  const preset = SPINNERS[raw.style] ||
+    (Array.isArray(raw.frames) && raw.frames.length ? null : SPINNERS[DEFAULTS.style]);
+  if (preset) {
+    cfg.frames = preset.frames;
+    cfg.intervalMs = raw.intervalMs ?? preset.intervalMs;
   }
+  cfg.intervalMs = Math.max(40, Number(cfg.intervalMs) || DEFAULTS.intervalMs);
+  cfg.pollMs = Math.max(250, Number(cfg.pollMs) || DEFAULTS.pollMs);
+  return cfg;
 }
 
-const cfg = loadConfig();
-// TTL outlives one frame but expires fast if we are killed, so a crashed daemon
-// never leaves a frozen glyph pinned in the sidebar.
-const TTL_MS = Math.max(1000, cfg.intervalMs * 8);
+let cfg;
+let TTL_MS;
 
 function snapshotAgents() {
   const r = spawnSync(HERDR, ["api", "snapshot"], {
@@ -112,11 +103,21 @@ function shutdown() {
   setTimeout(() => process.exit(0), 200);
 }
 
-if (!cfg.enabled) process.exit(0);
+function main() {
+  cfg = loadConfig();
+  // TTL outlives one frame but expires fast if we are killed, so a crashed
+  // daemon never leaves a frozen glyph pinned in the sidebar.
+  TTL_MS = Math.max(1000, cfg.intervalMs * 8);
+  if (!cfg.enabled) process.exit(0);
 
-for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(sig, shutdown);
-process.on("exit", () => { for (const pane of working) clearFrame(pane); });
+  for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(sig, shutdown);
+  process.on("exit", () => { for (const pane of working) clearFrame(pane); });
 
-poll();
-setInterval(poll, cfg.pollMs);
-setInterval(frame, cfg.intervalMs);
+  poll();
+  setInterval(poll, cfg.pollMs);
+  setInterval(frame, cfg.intervalMs);
+}
+
+if (require.main === module) main();
+
+module.exports = { loadConfig };
