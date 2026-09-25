@@ -1,8 +1,8 @@
 id = "hasuwini77.spinner"
 name = "Agent Spinner"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.8.0"
-description = "Animated braille spinner for panes in the working state, via display-only pane metadata"
+description = "Animated spinner styles and theme presets for Herdr: restyle the sidebar without changing how it works"
 platforms = ["linux", "macos"]
 
 [[startup]]
@@ -19,3 +19,21 @@ id = "stop"
 title = "Stop agent spinner"
 contexts = ["workspace"]
 command = ["sh", "run.sh", "--stop"]
+
+[[actions]]
+id = "next-spinner"
+title = "Next spinner style"
+contexts = ["workspace"]
+command = ["sh", "run.sh", "--style", "spinner", "next"]
+
+[[actions]]
+id = "next-theme"
+title = "Next theme preset"
+contexts = ["workspace"]
+command = ["sh", "run.sh", "--style", "theme", "next"]
+
+[[actions]]
+id = "reset-theme"
+title = "Restore my original theme"
+contexts = ["workspace"]
+command = ["sh", "run.sh", "--style", "theme", "reset"]
