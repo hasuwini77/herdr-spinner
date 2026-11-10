@@ -1,6 +1,6 @@
 id = "hasuwini77.spinner"
 name = "Agent Spinner"
-version = "0.2.0"
+version = "0.3.0"
 min_herdr_version = "0.8.0"
 description = "Animated spinner styles and theme presets for Herdr: restyle the sidebar without changing how it works"
 platforms = ["linux", "macos"]
