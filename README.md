@@ -73,6 +73,25 @@ herdr plugin action invoke restart --plugin hasuwini77.spinner
 herdr plugin action invoke stop    --plugin hasuwini77.spinner
 ```
 
+## Agent logos
+
+The daemon also reports a `$logo` token per agent pane: `✻` Claude, `>_` Codex,
+`✦` Gemini. Any other agent gets its own name, so a row never loses its
+identity. Use it in place of `"agent"` and colour each mark with token rules:
+
+```toml
+{ token = "$logo", bold = true, dim = false, rules = [
+  { equals = "✻", fg = "#e08a63" },
+  { equals = ">_", fg = "#e8ebf0" },
+  { equals = "✦", fg = "#7cc4ff" },
+  { contains = "", bold = false, dim = true },
+] }
+```
+
+The marks are terminal glyphs, not the vendors' bitmap logos. Override or add
+marks with `"logos": { "pi": "π" }` in the plugin config; `"logos": false`
+turns the token off. A mark is reported once per pane, not per frame.
+
 ## Styles
 
 Switch from Herdr's action menu, or from a shell:

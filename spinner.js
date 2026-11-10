@@ -16,6 +16,13 @@ const { PLUGIN_ID, readConfig } = require("./config");
 
 const HERDR = process.env.HERDR_BIN_PATH || process.env.HERDR_BIN || "herdr";
 const TOKEN = "spin";
+const LOGO_TOKEN = "logo";
+
+// Brand mark per agent for the `$logo` sidebar token. Terminal glyphs, not
+// bitmaps; colour comes from token rules in config.toml. An agent with no
+// mark falls back to its name, so the row never loses its identity.
+const LOGOS = { claude: "✻", codex: ">_", gemini: "✦" };
+const logoFor = (agent, logos = LOGOS) => logos[agent] || agent || "";
 
 const DEFAULTS = {
   // Braille ring: reads as motion even at a low frame rate. See presets.js
@@ -27,6 +34,8 @@ const DEFAULTS = {
   intervalMs: 160,
   // How often to re-ask which panes are working. Cheap relative to frames.
   pollMs: 1000,
+  // Per-agent marks merged over LOGOS; `logos: false` turns the token off.
+  logos: {},
   // Only these states get a spinner.
   animateStates: ["working"],
   enabled: true,
@@ -74,6 +83,28 @@ const setFrame = (pane, frame) =>
   report(pane, ["--token", `${TOKEN}=${frame}`, "--ttl-ms", String(TTL_MS)]);
 const clearFrame = (pane) => report(pane, ["--clear-token", TOKEN]);
 
+// One report per pane and change, not per poll: a mark is static. The cache
+// is dropped every LOGO_REFRESH_POLLS so a restarted server gets them again.
+const LOGO_REFRESH_POLLS = 60;
+let logoSeen = new Map();
+let polls = 0;
+
+function syncLogos(agents) {
+  if (cfg.logos === false) return;
+  if (polls++ % LOGO_REFRESH_POLLS === 0) logoSeen = new Map();
+  const marks = { ...LOGOS, ...cfg.logos };
+  const live = new Map();
+  for (const a of agents) {
+    const mark = logoFor(a.agent, marks);
+    if (!mark) continue;
+    live.set(a.pane_id, mark);
+    if (logoSeen.get(a.pane_id) !== mark) {
+      report(a.pane_id, ["--token", `${LOGO_TOKEN}=${mark}`]);
+    }
+  }
+  logoSeen = live;
+}
+
 let working = [];
 let tick = 0;
 let stopping = false;
@@ -82,6 +113,7 @@ function poll() {
   if (stopping) return;
   const agents = snapshotAgents();
   if (agents === null) return; // transient socket failure: keep last known set
+  syncLogos(agents);
   const next = agents
     .filter((a) => cfg.animateStates.includes(a.agent_status))
     .map((a) => a.pane_id);
@@ -120,4 +152,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { loadConfig };
+module.exports = { loadConfig, logoFor, LOGOS };
